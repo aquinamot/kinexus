@@ -6,6 +6,7 @@ import { requireAuth, type AuthedVars } from './auth/middleware';
 import { importRoutes } from './import/routes';
 import { workoutsRoutes } from './workouts/routes';
 import { sessionsRoutes } from './sessions/routes';
+import { dashboardRoutes } from './dashboard/routes';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthedVars }>();
 
@@ -24,7 +25,6 @@ app.use('*', requireAuth);
 app.route('/importar', importRoutes);
 app.route('/treinos', workoutsRoutes);
 app.route('/sessoes', sessionsRoutes);
-
-app.get('/', c => c.text(`Logged in as user ${c.get('userId')}`)); // replaced by Task 16
+app.route('/', dashboardRoutes);
 
 export default app;
