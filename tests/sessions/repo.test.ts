@@ -55,6 +55,19 @@ describe('startSession / getOpenSession / endSession', () => {
     expect(closed?.endedAt).toBe(sixHoursAgo + 5 * 60 * 60 * 1000);
     expect(closed?.durationCounted).toBe(0);
   });
+
+  it('records the session date using São Paulo time, not UTC', async () => {
+    // 2026-09-29T02:00:00Z = 2026-09-28T23:00:00-03:00 in São Paulo — the 28th,
+    // even though UTC has already rolled over to the 29th.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-29T02:00:00Z'));
+    try {
+      const session = await startSession(env.DB, userId, null);
+      expect(session.date).toBe('2026-09-28');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('getTrainedDaysInMonth', () => {

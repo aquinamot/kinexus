@@ -24,15 +24,28 @@ export function parseWorkoutInput(raw: string): ParseResult {
   }
 
   const jsonResult = tryParseJson(trimmed);
-  if (jsonResult) return jsonResult;
+  if (jsonResult) return validateWorkout(jsonResult);
 
   const listResult = tryParseList(trimmed);
-  if (listResult) return listResult;
+  if (listResult) return validateWorkout(listResult);
 
   return {
     ok: false,
     error: 'Não consegui reconhecer o formato. Cole um JSON ou uma lista como "Nome do exercício: 4x8-10".',
   };
+}
+
+function validateWorkout(result: ParseResult): ParseResult {
+  if (!result.ok) return result;
+  if (result.workout.days.length === 0) {
+    return { ok: false, error: 'Nenhum dia de treino foi encontrado. Confira o conteúdo colado.' };
+  }
+  for (const day of result.workout.days) {
+    if (day.exercises.length === 0) {
+      return { ok: false, error: `O treino "${day.label}" não tem nenhum exercício.` };
+    }
+  }
+  return result;
 }
 
 function tryParseJson(text: string): ParseResult | null {

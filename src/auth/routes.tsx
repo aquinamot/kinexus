@@ -71,12 +71,11 @@ authRoutes.post('/:userId', async c => {
   const pin = String(body.pin ?? '');
 
   const user = await c.env.DB.prepare(
-    'SELECT id, name, pin_hash as pinHash, failed_pin_attempts as failedAttempts, locked_until as lockedUntil FROM users WHERE id = ?'
+    'SELECT id, name, pin_hash as pinHash, locked_until as lockedUntil FROM users WHERE id = ?'
   ).bind(userId).first<{
     id: number;
     name: string;
     pinHash: string;
-    failedAttempts: number;
     lockedUntil: number | null;
   }>();
 
@@ -88,11 +87,19 @@ authRoutes.post('/:userId', async c => {
 
   const valid = await verifyPin(pin, user.pinHash);
   if (!valid) {
-    const attempts = user.failedAttempts + 1;
-    const lockedUntil = attempts >= MAX_ATTEMPTS ? Date.now() + LOCK_MS : null;
-    await c.env.DB.prepare('UPDATE users SET failed_pin_attempts = ?, locked_until = ? WHERE id = ?')
-      .bind(lockedUntil ? 0 : attempts, lockedUntil, userId)
-      .run();
+    // Increment atomically in the database itself — reading the count in app code,
+    // then writing count+1 back, loses updates when wrong-PIN requests race each
+    // other (every racer reads the same starting count).
+    const incremented = await c.env.DB.prepare(
+      'UPDATE users SET failed_pin_attempts = failed_pin_attempts + 1 WHERE id = ? RETURNING failed_pin_attempts'
+    ).bind(userId).first<{ failed_pin_attempts: number }>();
+    const attempts = incremented!.failed_pin_attempts;
+
+    if (attempts >= MAX_ATTEMPTS) {
+      await c.env.DB.prepare('UPDATE users SET failed_pin_attempts = 0, locked_until = ? WHERE id = ?')
+        .bind(Date.now() + LOCK_MS, userId)
+        .run();
+    }
     return c.html(<Layout title="Entrar"><p>PIN incorreto.</p></Layout>, 401);
   }
 

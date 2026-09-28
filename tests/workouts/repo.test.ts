@@ -50,6 +50,30 @@ describe('persistImportedPlan + getActivePlan', () => {
   it('returns null when the user has no active plan', async () => {
     expect(await getActivePlan(env.DB, userId)).toBeNull();
   });
+
+  it('leaves the previous plan active if building the new plan fails partway through', async () => {
+    await persistImportedPlan(env.DB, userId, sampleWorkout);
+
+    const brokenWorkout: ResolvedWorkout = {
+      planName: 'Plano Quebrado',
+      days: [
+        {
+          label: 'A',
+          focusName: 'Peito',
+          exercises: [
+            // exerciseId 999999 doesn't exist — violates the FK to `exercises`,
+            // simulating a failure partway through building the new plan.
+            { exerciseId: 999999, customName: null, sets: 4, reps: '8-10', youtubeUrl: null },
+          ],
+        },
+      ],
+    };
+
+    await expect(persistImportedPlan(env.DB, userId, brokenWorkout)).rejects.toThrow();
+
+    const active = await getActivePlan(env.DB, userId);
+    expect(active?.name).toBe('Plano Teste'); // the original plan, still active
+  });
 });
 
 describe('getDayExercises', () => {

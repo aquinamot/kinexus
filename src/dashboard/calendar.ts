@@ -1,3 +1,5 @@
+import { formatDateBR } from '../dateBR';
+
 export interface CalendarDay {
   day: number;
   dateStr: string;
@@ -16,7 +18,7 @@ export function buildMonthCalendar(
   const firstOfMonth = new Date(Date.UTC(year, month - 1, 1));
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const startWeekday = firstOfMonth.getUTCDay(); // 0 = Sunday
-  const todayStr = today.toISOString().slice(0, 10);
+  const todayStr = formatDateBR(today);
 
   const cells: CalendarDay[] = [];
 

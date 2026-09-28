@@ -58,4 +58,22 @@ Puxada frontal: 4x10
     const result = parseWorkoutInput('Hoje treinei bem e me senti ótimo, foi um dia produtivo na academia.');
     expect(result.ok).toBe(false);
   });
+
+  it('rejects JSON with an empty "dias" array, instead of wiping the active plan with nothing', () => {
+    const result = parseWorkoutInput(JSON.stringify({ plano: 'Plano vazio', dias: [] }));
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects a day with no exercises', () => {
+    const raw = JSON.stringify({
+      plano: 'Plano',
+      dias: [{ label: 'A', foco: 'Peito', exercicios: [] }],
+    });
+    expect(parseWorkoutInput(raw).ok).toBe(false);
+  });
+
+  it('rejects a list day header with no exercise lines under it', () => {
+    const result = parseWorkoutInput('Treino A - Peito\n');
+    expect(result.ok).toBe(false);
+  });
 });

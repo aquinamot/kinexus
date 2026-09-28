@@ -45,12 +45,12 @@ export async function persistImportedPlan(
   userId: number,
   workout: ResolvedWorkout
 ): Promise<number> {
-  await db.prepare('UPDATE workout_plans SET is_active = 0 WHERE user_id = ? AND is_active = 1')
-    .bind(userId)
-    .run();
-
+  // Build the new plan fully inactive first. Only swap it in for the old one —
+  // as the very last step — once every day and exercise has been inserted
+  // successfully. If anything fails while building, the previous plan (still
+  // active) is untouched; the abandoned partial row is harmless.
   const planRow = await db.prepare(
-    'INSERT INTO workout_plans (user_id, name, created_at, is_active) VALUES (?, ?, ?, 1) RETURNING id'
+    'INSERT INTO workout_plans (user_id, name, created_at, is_active) VALUES (?, ?, ?, 0) RETURNING id'
   ).bind(userId, workout.planName, Date.now()).first<{ id: number }>();
   const planId = planRow!.id;
 
@@ -70,6 +70,11 @@ export async function persistImportedPlan(
       ).bind(dayId, ex.exerciseId, ex.customName, ex.sets, ex.reps, exIndex, ex.youtubeUrl).run();
     }
   }
+
+  await db.batch([
+    db.prepare('UPDATE workout_plans SET is_active = 0 WHERE user_id = ? AND is_active = 1').bind(userId),
+    db.prepare('UPDATE workout_plans SET is_active = 1 WHERE id = ?').bind(planId),
+  ]);
 
   return planId;
 }

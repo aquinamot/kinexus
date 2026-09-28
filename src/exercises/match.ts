@@ -11,7 +11,7 @@ export interface MatchCandidate {
 export function normalize(name: string): string {
   return name
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/\p{Mn}/gu, '')
     .toLowerCase()
     .trim();
 }

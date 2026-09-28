@@ -12,6 +12,12 @@ describe('normalize', () => {
     expect(normalize('Supino Reto Com Barra')).toBe('supino reto com barra');
     expect(normalize('Agachamento')).toBe('agachamento');
   });
+
+  it('actually strips real diacritics (previous test strings had none)', () => {
+    expect(normalize('Flexão de Braços')).toBe('flexao de bracos');
+    expect(normalize('Extensão de Pé')).toBe('extensao de pe');
+    expect(normalize('EXTENSÃO')).toBe('extensao');
+  });
 });
 
 describe('findExactMatch', () => {

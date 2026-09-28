@@ -58,6 +58,27 @@ describe('login routes', () => {
     expect(res.status).toBe(429);
   });
 
+  it('locks out after 5 failed attempts even when they arrive concurrently', async () => {
+    const userId = await seedUser('Grace', '7777');
+
+    await Promise.all(
+      Array.from({ length: 5 }, () =>
+        SELF.fetch(`http://local/login/${userId}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+          body: 'pin=0000',
+        })
+      )
+    );
+
+    const res = await SELF.fetch(`http://local/login/${userId}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'pin=7777', // correct pin — must still be rejected if the 5 concurrent attempts locked the account
+    });
+    expect(res.status).toBe(429);
+  });
+
   it('redirects unauthenticated requests to /login', async () => {
     const res = await SELF.fetch('http://local/', { redirect: 'manual' });
     expect(res.status).toBe(302);
@@ -75,6 +96,24 @@ describe('login routes', () => {
     });
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe(`/login/${userId}`);
+  });
+
+  it('logout invalidates the session server-side, not just the cookie', async () => {
+    const userId = await seedUser('Heidi', '8888');
+    const loginRes = await SELF.fetch(`http://local/login/${userId}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'pin=8888',
+      redirect: 'manual',
+    });
+    const cookie = loginRes.headers.get('set-cookie')!.split(';')[0];
+
+    await SELF.fetch('http://local/logout', { method: 'POST', headers: { cookie } });
+
+    // Replaying the same (now-logged-out) session cookie must no longer authenticate.
+    const res = await SELF.fetch('http://local/', { headers: { cookie }, redirect: 'manual' });
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toContain('/login');
   });
 
   it('"trocar usuário" (?trocar=1) shows the full list even when a user is remembered', async () => {

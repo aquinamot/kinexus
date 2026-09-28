@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
-import { deleteCookie } from 'hono/cookie';
+import { getCookie, deleteCookie } from 'hono/cookie';
 import type { Env } from './types';
 import { authRoutes } from './auth/routes';
 import { requireAuth, type AuthedVars } from './auth/middleware';
+import { deleteSession } from './auth/session';
 import { importRoutes } from './import/routes';
 import { workoutsRoutes } from './workouts/routes';
 import { sessionsRoutes } from './sessions/routes';
@@ -14,7 +15,9 @@ app.get('/health', c => c.text('ok'));
 
 app.route('/login', authRoutes);
 
-app.post('/logout', c => {
+app.post('/logout', async c => {
+  const sessionId = getCookie(c, 'kinexus_session');
+  if (sessionId) await deleteSession(c.env.DB, sessionId);
   deleteCookie(c, 'kinexus_session', { path: '/' });
   deleteCookie(c, 'kinexus_remembered_user', { path: '/' });
   return c.redirect('/login');

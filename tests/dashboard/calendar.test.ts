@@ -28,4 +28,13 @@ describe('buildMonthCalendar', () => {
     const inMonthDays = weeks.flat().filter(d => d.inMonth).map(d => d.day);
     expect(inMonthDays).toEqual(Array.from({ length: 30 }, (_, i) => i + 1));
   });
+
+  it('marks "today" using São Paulo time, not UTC, near the day boundary', () => {
+    // 2026-09-29T02:00:00Z = 2026-09-28T23:00:00-03:00 in São Paulo — still the 28th.
+    const weeks = buildMonthCalendar(2026, 9, [], new Date('2026-09-29T02:00:00Z'));
+    const day28 = weeks.flat().find(d => d.dateStr === '2026-09-28');
+    const day29 = weeks.flat().find(d => d.dateStr === '2026-09-29');
+    expect(day28?.isToday).toBe(true);
+    expect(day29?.isToday).toBe(false);
+  });
 });

@@ -1,3 +1,5 @@
+import { formatDateBR } from '../dateBR';
+
 const AUTO_CLOSE_MS = 5 * 60 * 60 * 1000; // 5 hours
 
 export interface WorkoutSession {
@@ -41,7 +43,7 @@ export async function startSession(
   if (existing) return existing;
 
   const now = Date.now();
-  const date = new Date(now).toISOString().slice(0, 10);
+  const date = formatDateBR(new Date(now));
   const row = await db.prepare(
     'INSERT INTO workout_sessions (user_id, workout_day_id, date, started_at, ended_at, duration_counted) VALUES (?, ?, ?, ?, NULL, NULL) RETURNING id'
   ).bind(userId, workoutDayId, date, now).first<{ id: number }>();
