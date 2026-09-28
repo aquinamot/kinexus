@@ -1,3 +1,3 @@
-INSERT INTO users (name, pin_hash, failed_pin_attempts, locked_until, created_at) VALUES ('Bruno', 'aedbeb8a16c7fb4559bf1b2404697bb3:a7bbd1c376f5d0e1c0ac420a2ef4b8a4d9bd5e1af51c813e47ce1410c2d28f04', 0, NULL, 1790620709501);
-INSERT INTO users (name, pin_hash, failed_pin_attempts, locked_until, created_at) VALUES ('Michele', '05716406a9f8ef0d4a47f312329ce89a:4c3ced7a7fc5cb844dc6dfe26772f299edfe190102b1226aa70b7f5ee6c3ae7e', 0, NULL, 1790620709511);
-INSERT INTO users (name, pin_hash, failed_pin_attempts, locked_until, created_at) VALUES ('Cecília', '0601528b879b4ff5c024346c239c642d:0dae75917ca0b83a7c49ba9d0279da20ddc9bf30a307384f391686cab768797e', 0, NULL, 1790620709521);
+INSERT INTO users (name, pin_hash, failed_pin_attempts, locked_until, created_at) VALUES ('Bruno', 'd8e814e742718ed8e57fdc53e013afe2:2ea4a412bab2e388c1f532f50c944595374760abb24d926bab43d7f775fee0d8', 0, NULL, 1790626300124);
+INSERT INTO users (name, pin_hash, failed_pin_attempts, locked_until, created_at) VALUES ('Michele', 'c29aca1e34bcc2b7b74c0ffd3c880259:44149af96e9ac59282b8e92d7d9428a6d11a61951abb9af76465eb8cbc656468', 0, NULL, 1790626300134);
+INSERT INTO users (name, pin_hash, failed_pin_attempts, locked_until, created_at) VALUES ('Cecília', 'a1f8375d1720f23533d5eb42aebf7b20:85b3203cf2aeb4ee60602d237fddbec6dcd1add59938c40d6ec82a7a151e111d', 0, NULL, 1790626300144);
