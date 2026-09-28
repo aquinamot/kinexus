@@ -1,0 +1,3 @@
+INSERT INTO users (name, pin_hash, failed_pin_attempts, locked_until, created_at) VALUES ('Bruno', 'aedbeb8a16c7fb4559bf1b2404697bb3:a7bbd1c376f5d0e1c0ac420a2ef4b8a4d9bd5e1af51c813e47ce1410c2d28f04', 0, NULL, 1790620709501);
+INSERT INTO users (name, pin_hash, failed_pin_attempts, locked_until, created_at) VALUES ('Michele', '05716406a9f8ef0d4a47f312329ce89a:4c3ced7a7fc5cb844dc6dfe26772f299edfe190102b1226aa70b7f5ee6c3ae7e', 0, NULL, 1790620709511);
+INSERT INTO users (name, pin_hash, failed_pin_attempts, locked_until, created_at) VALUES ('Cecília', '0601528b879b4ff5c024346c239c642d:0dae75917ca0b83a7c49ba9d0279da20ddc9bf30a307384f391686cab768797e', 0, NULL, 1790620709521);
