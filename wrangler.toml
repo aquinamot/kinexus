@@ -5,5 +5,5 @@ compatibility_date = "2026-09-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "kinexus"
-database_id = "REPLACE_WITH_REAL_ID"
+database_id = "cef3ca63-575e-44ee-ba8b-d7c120ca470f"
 migrations_dir = "migrations"
