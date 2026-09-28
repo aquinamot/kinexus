@@ -1,0 +1,9 @@
+name = "kinexus"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kinexus"
+database_id = "REPLACE_WITH_REAL_ID"
+migrations_dir = "migrations"
