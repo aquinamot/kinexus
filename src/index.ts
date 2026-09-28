@@ -4,6 +4,7 @@ import type { Env } from './types';
 import { authRoutes } from './auth/routes';
 import { requireAuth, type AuthedVars } from './auth/middleware';
 import { importRoutes } from './import/routes';
+import { workoutsRoutes } from './workouts/routes';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthedVars }>();
 
@@ -20,6 +21,7 @@ app.post('/logout', c => {
 app.use('*', requireAuth);
 
 app.route('/importar', importRoutes);
+app.route('/treinos', workoutsRoutes);
 
 app.get('/', c => c.text(`Logged in as user ${c.get('userId')}`)); // replaced by Task 16
 
