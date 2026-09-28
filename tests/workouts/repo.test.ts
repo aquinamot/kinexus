@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { env } from 'cloudflare:test';
-import { persistImportedPlan, getActivePlan, getDayExercises, type ResolvedWorkout } from '../../src/workouts/repo';
+import {
+  persistImportedPlan,
+  getActivePlan,
+  getDayExercises,
+  updateExerciseYoutubeUrl,
+  deleteActivePlan,
+  type ResolvedWorkout,
+} from '../../src/workouts/repo';
 
 let userId: number;
 
@@ -100,5 +107,69 @@ describe('getDayExercises', () => {
 
     expect(exercises).toHaveLength(1);
     expect(exercises[0].name).toBe('Supino reto com barra');
+  });
+});
+
+describe('updateExerciseYoutubeUrl', () => {
+  it('sets the youtube link on an exercise owned by the user', async () => {
+    await persistImportedPlan(env.DB, userId, sampleWorkout);
+    const plan = await getActivePlan(env.DB, userId);
+    const exercises = await getDayExercises(env.DB, plan!.days[0].id);
+
+    const updated = await updateExerciseYoutubeUrl(env.DB, userId, exercises[0].id, 'https://youtube.com/watch?v=new');
+    expect(updated).toBe(true);
+
+    const after = await getDayExercises(env.DB, plan!.days[0].id);
+    expect(after[0].youtubeUrl).toBe('https://youtube.com/watch?v=new');
+  });
+
+  it('does nothing when the exercise belongs to a different user', async () => {
+    await persistImportedPlan(env.DB, userId, sampleWorkout);
+    const plan = await getActivePlan(env.DB, userId);
+    const exercises = await getDayExercises(env.DB, plan!.days[0].id);
+
+    const otherUser = await env.DB.prepare(
+      "INSERT INTO users (name, pin_hash, created_at) VALUES (?, 'x', ?) RETURNING id"
+    ).bind(`other-${Math.random()}`, Date.now()).first<{ id: number }>();
+
+    const updated = await updateExerciseYoutubeUrl(env.DB, otherUser!.id, exercises[0].id, 'https://youtube.com/watch?v=hijack');
+    expect(updated).toBe(false);
+
+    const after = await getDayExercises(env.DB, plan!.days[0].id);
+    expect(after[0].youtubeUrl).toBeNull();
+  });
+});
+
+describe('deleteActivePlan', () => {
+  it('removes the active plan, its days and exercises', async () => {
+    await persistImportedPlan(env.DB, userId, sampleWorkout);
+
+    await deleteActivePlan(env.DB, userId);
+
+    expect(await getActivePlan(env.DB, userId)).toBeNull();
+    const remainingDays = await env.DB.prepare('SELECT COUNT(*) as n FROM workout_days').first<{ n: number }>();
+    expect(remainingDays?.n).toBe(0);
+    const remainingExercises = await env.DB.prepare('SELECT COUNT(*) as n FROM workout_exercises').first<{ n: number }>();
+    expect(remainingExercises?.n).toBe(0);
+  });
+
+  it('keeps frequency history intact — sessions lose their day reference but not their date', async () => {
+    const planId = await persistImportedPlan(env.DB, userId, sampleWorkout);
+    const day = await env.DB.prepare('SELECT id FROM workout_days WHERE plan_id = ?').bind(planId).first<{ id: number }>();
+    await env.DB.prepare(
+      "INSERT INTO workout_sessions (user_id, workout_day_id, date, started_at, ended_at, duration_counted) VALUES (?, ?, '2026-09-20', 0, 100, 1)"
+    ).bind(userId, day!.id).run();
+
+    await deleteActivePlan(env.DB, userId);
+
+    const session = await env.DB.prepare('SELECT date, workout_day_id as workoutDayId FROM workout_sessions WHERE user_id = ?')
+      .bind(userId)
+      .first<{ date: string; workoutDayId: number | null }>();
+    expect(session?.date).toBe('2026-09-20');
+    expect(session?.workoutDayId).toBeNull();
+  });
+
+  it('does nothing when the user has no active plan', async () => {
+    await expect(deleteActivePlan(env.DB, userId)).resolves.not.toThrow();
   });
 });

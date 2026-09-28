@@ -90,6 +90,47 @@ describe('import routes', () => {
       .first<{ name: string }>();
     expect(plan?.name).toBe('Plano B');
   });
+
+  it('persists the "youtube" link supplied per exercise in the pasted JSON', async () => {
+    const raw = JSON.stringify({
+      plano: 'Plano C',
+      dias: [
+        {
+          label: 'A',
+          foco: 'Peito',
+          exercicios: [
+            { nome: 'Exercício sem catálogo', series: 3, reps: '10', youtube: 'https://youtube.com/watch?v=xyz' },
+          ],
+        },
+      ],
+    });
+
+    const previewRes = await SELF.fetch('http://local/importar/preview', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: sessionCookie },
+      body: 'raw=' + encodeURIComponent(raw),
+    });
+    const previewHtml = await previewRes.text();
+    const workoutJson = previewHtml.match(/name="workout" value="([^"]+)"/)?.[1];
+
+    const confirmBody = new URLSearchParams();
+    confirmBody.set('workout', decodeHtmlEntities(workoutJson!));
+    confirmBody.set('resolve_0_0', 'avulso');
+
+    await SELF.fetch('http://local/importar/confirm', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: sessionCookie },
+      body: confirmBody.toString(),
+    });
+
+    const saved = await env.DB.prepare(
+      `SELECT we.youtube_url as youtubeUrl FROM workout_exercises we
+       JOIN workout_days wd ON wd.id = we.workout_day_id
+       JOIN workout_plans wp ON wp.id = wd.plan_id
+       WHERE wp.user_id = ? AND wp.is_active = 1`
+    ).bind(userId).first<{ youtubeUrl: string }>();
+    expect(saved?.youtubeUrl).toBe('https://youtube.com/watch?v=xyz');
+  });
 });
 
 function decodeHtmlEntities(s: string): string {

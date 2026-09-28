@@ -10,6 +10,7 @@ interface PreviewExercise {
   name: string;
   sets: number;
   reps: string;
+  youtubeUrl: string | null;
   exerciseId: number | null;
   candidates: MatchCandidate[];
 }
@@ -68,13 +69,13 @@ importRoutes.post('/confirm', async c => {
       focusName: day.focusName,
       exercises: day.exercises.map((ex, exIndex) => {
         if (ex.exerciseId !== null) {
-          return { exerciseId: ex.exerciseId, customName: null, sets: ex.sets, reps: ex.reps, youtubeUrl: null };
+          return { exerciseId: ex.exerciseId, customName: null, sets: ex.sets, reps: ex.reps, youtubeUrl: ex.youtubeUrl };
         }
         const resolution = String(body[`resolve_${dayIndex}_${exIndex}`] ?? 'avulso');
         if (resolution === 'avulso') {
-          return { exerciseId: null, customName: ex.name, sets: ex.sets, reps: ex.reps, youtubeUrl: null };
+          return { exerciseId: null, customName: ex.name, sets: ex.sets, reps: ex.reps, youtubeUrl: ex.youtubeUrl };
         }
-        return { exerciseId: Number(resolution), customName: null, sets: ex.sets, reps: ex.reps, youtubeUrl: null };
+        return { exerciseId: Number(resolution), customName: null, sets: ex.sets, reps: ex.reps, youtubeUrl: ex.youtubeUrl };
       }),
     })),
   };
@@ -95,6 +96,7 @@ function buildPreview(workout: ParsedWorkout, catalog: CatalogExercise[]): Previ
           name: ex.name,
           sets: ex.sets,
           reps: ex.reps,
+          youtubeUrl: ex.youtubeUrl,
           exerciseId: exact ? exact.id : null,
           candidates: exact ? [] : findClosestMatches(ex.name, catalog),
         };
@@ -123,6 +125,34 @@ function ImportForm({ raw, error }: { raw?: string; error?: string }) {
           Analisar treino
         </button>
       </form>
+      <details style="margin-top:16px;">
+        <summary class="link" style="cursor:pointer;">
+          Ver formato esperado do JSON
+        </summary>
+        <pre
+          style="margin-top:10px;padding:12px;background:var(--bg);border-radius:10px;font-size:11px;overflow-x:auto;"
+        >{`{
+  "plano": "Nome da planilha",
+  "dias": [
+    {
+      "label": "A",
+      "foco": "Peito/Tríceps",
+      "exercicios": [
+        {
+          "nome": "Supino reto com barra",
+          "series": 4,
+          "reps": "8-10",
+          "youtube": "https://youtube.com/watch?v=..."
+        }
+      ]
+    }
+  ]
+}`}</pre>
+        <p class="muted" style="margin-top:8px;">
+          O campo <code>youtube</code> é opcional — use quando o exercício não existir no catálogo da Garmin (ex:
+          exercícios de reabilitação/estabilização).
+        </p>
+      </details>
     </div>
   );
 }

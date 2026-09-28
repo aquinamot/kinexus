@@ -2,6 +2,7 @@ export interface ParsedExercise {
   name: string;
   sets: number;
   reps: string;
+  youtubeUrl: string | null;
 }
 
 export interface ParsedDay {
@@ -87,7 +88,8 @@ function tryParseJson(text: string): ParseResult | null {
           error: `Exercício inválido em "${d.label}": precisa de nome (texto), series (número) e reps (texto).`,
         };
       }
-      exercises.push({ name: e.nome, sets: e.series, reps: e.reps });
+      const youtubeUrl = typeof e.youtube === 'string' ? e.youtube : null;
+      exercises.push({ name: e.nome, sets: e.series, reps: e.reps, youtubeUrl });
     }
 
     days.push({ label: d.label, focusName: d.foco, exercises });
@@ -122,6 +124,7 @@ function tryParseList(text: string): ParseResult | null {
         name: exMatch[1].trim(),
         sets: parseInt(exMatch[2], 10),
         reps: exMatch[3].trim(),
+        youtubeUrl: null,
       });
     }
   }

@@ -26,6 +26,28 @@ describe('parseWorkoutInput', () => {
     expect(result.ok).toBe(false);
   });
 
+  it('parses an optional "youtube" field per exercise', () => {
+    const raw = JSON.stringify({
+      plano: 'Plano',
+      dias: [
+        {
+          label: 'A',
+          foco: 'Peito',
+          exercicios: [
+            { nome: 'Supino reto com barra', series: 4, reps: '8-10', youtube: 'https://youtube.com/watch?v=abc' },
+            { nome: 'Crucifixo', series: 3, reps: '12' },
+          ],
+        },
+      ],
+    });
+    const result = parseWorkoutInput(raw);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.workout.days[0].exercises[0].youtubeUrl).toBe('https://youtube.com/watch?v=abc');
+      expect(result.workout.days[0].exercises[1].youtubeUrl).toBeNull();
+    }
+  });
+
   it('parses a semi-structured list', () => {
     const raw = `
 Treino A - Peito/Tríceps
@@ -45,6 +67,7 @@ Puxada frontal: 4x10
         name: 'Puxada frontal',
         sets: 4,
         reps: '10',
+        youtubeUrl: null,
       });
     }
   });

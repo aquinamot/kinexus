@@ -93,6 +93,50 @@ export async function getActivePlan(db: D1Database, userId: number): Promise<Act
   return { id: plan.id, name: plan.name, days: days ?? [] };
 }
 
+export async function deleteActivePlan(db: D1Database, userId: number): Promise<void> {
+  const plan = await db.prepare('SELECT id FROM workout_plans WHERE user_id = ? AND is_active = 1')
+    .bind(userId)
+    .first<{ id: number }>();
+  if (!plan) return;
+
+  const { results: days } = await db.prepare('SELECT id FROM workout_days WHERE plan_id = ?')
+    .bind(plan.id)
+    .all<{ id: number }>();
+  const dayIds = (days ?? []).map(d => d.id);
+
+  const statements = [];
+  // Sessions keep their date (frequency history stays intact) but can no longer
+  // reference a day that's about to be deleted.
+  for (const dayId of dayIds) {
+    statements.push(db.prepare('UPDATE workout_sessions SET workout_day_id = NULL WHERE workout_day_id = ?').bind(dayId));
+    statements.push(db.prepare('DELETE FROM workout_exercises WHERE workout_day_id = ?').bind(dayId));
+  }
+  statements.push(db.prepare('DELETE FROM workout_days WHERE plan_id = ?').bind(plan.id));
+  statements.push(db.prepare('DELETE FROM workout_plans WHERE id = ?').bind(plan.id));
+
+  await db.batch(statements);
+}
+
+export async function updateExerciseYoutubeUrl(
+  db: D1Database,
+  userId: number,
+  workoutExerciseId: number,
+  youtubeUrl: string | null
+): Promise<boolean> {
+  const result = await db.prepare(
+    `UPDATE workout_exercises
+     SET youtube_url = ?
+     WHERE id = ?
+       AND workout_day_id IN (
+         SELECT wd.id FROM workout_days wd
+         JOIN workout_plans wp ON wp.id = wd.plan_id
+         WHERE wp.user_id = ?
+       )`
+  ).bind(youtubeUrl, workoutExerciseId, userId).run();
+
+  return (result.meta.changes ?? 0) > 0;
+}
+
 export async function getDayExercises(db: D1Database, workoutDayId: number): Promise<DayExercise[]> {
   const { results } = await db.prepare(
     `SELECT
