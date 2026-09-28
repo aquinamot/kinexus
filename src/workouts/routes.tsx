@@ -12,10 +12,12 @@ workoutsRoutes.get('/', async c => {
 
   if (!plan || plan.days.length === 0) {
     return c.html(
-      <Layout title="Meus treinos">
-        <p>
-          Nenhuma planilha ativa. <a href="/importar">Importar treino</a>.
-        </p>
+      <Layout title="Meus treinos" showNav>
+        <div class="card">
+          <p class="muted">
+            Nenhuma planilha ativa. <a href="/importar" class="link">Importar treino</a>.
+          </p>
+        </div>
       </Layout>
     );
   }
@@ -25,22 +27,31 @@ workoutsRoutes.get('/', async c => {
   const exercises = await getDayExercises(c.env.DB, activeDay.id);
 
   return c.html(
-    <Layout title="Meus treinos">
+    <Layout title="Meus treinos" showNav>
       <h1>{plan.name}</h1>
-      <nav>
+      <nav class="day-tabs">
         {plan.days.map(d => (
-          <a href={`/treinos?dia=${d.id}`}>Treino {d.label}</a>
+          <a href={`/treinos?dia=${d.id}`} class={`day-tab${d.id === activeDay.id ? ' active' : ''}`}>
+            Treino {d.label}
+          </a>
         ))}
       </nav>
-      <h2>{activeDay.focusName}</h2>
-      <ul>
-        {exercises.map(ex => (
-          <li>
-            <ExerciseReference exercise={ex} />
-            {ex.name} — {ex.sets}x{ex.reps}
-          </li>
-        ))}
-      </ul>
+      <div class="card">
+        <h2>{activeDay.focusName}</h2>
+        <ul>
+          {exercises.map(ex => (
+            <li class="exercise-row">
+              <ExerciseReference exercise={ex} />
+              <div>
+                <div class="exercise-name">{ex.name}</div>
+                <div class="exercise-meta">
+                  {ex.sets}x{ex.reps}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </Layout>
   );
 });
@@ -48,8 +59,8 @@ workoutsRoutes.get('/', async c => {
 function ExerciseReference({ exercise }: { exercise: DayExercise }) {
   if (exercise.youtubeUrl) {
     return (
-      <a href={exercise.youtubeUrl} target="_blank" rel="noreferrer">
-        ▶ Assistir no YouTube
+      <a href={exercise.youtubeUrl} target="_blank" rel="noreferrer" class="exercise-thumb-placeholder">
+        ▶
       </a>
     );
   }
@@ -58,11 +69,10 @@ function ExerciseReference({ exercise }: { exercise: DayExercise }) {
       <img
         src={exercise.garminImageUrl}
         alt={exercise.name}
-        width={56}
-        height={56}
+        class="exercise-thumb"
         onerror="this.replaceWith(document.createTextNode('Sem referência disponível'))"
       />
     );
   }
-  return <span>Sem referência disponível</span>;
+  return <span class="exercise-meta">Sem referência disponível</span>;
 }

@@ -27,7 +27,7 @@ export const importRoutes = new Hono<{ Bindings: Env; Variables: AuthedVars }>()
 
 importRoutes.get('/', c =>
   c.html(
-    <Layout title="Importar treino">
+    <Layout title="Importar treino" showNav>
       <ImportForm />
     </Layout>
   )
@@ -40,7 +40,7 @@ importRoutes.post('/preview', async c => {
 
   if (!result.ok) {
     return c.html(
-      <Layout title="Importar treino">
+      <Layout title="Importar treino" showNav>
         <ImportForm raw={raw} error={result.error} />
       </Layout>
     );
@@ -50,7 +50,7 @@ importRoutes.post('/preview', async c => {
   const preview = buildPreview(result.workout, catalog ?? []);
 
   return c.html(
-    <Layout title="Revisar importação">
+    <Layout title="Revisar importação" showNav>
       <ImportPreview preview={preview} />
     </Layout>
   );
@@ -105,14 +105,23 @@ function buildPreview(workout: ParsedWorkout, catalog: CatalogExercise[]): Previ
 
 function ImportForm({ raw, error }: { raw?: string; error?: string }) {
   return (
-    <div>
+    <div class="card">
       <h1>Importar treino</h1>
-      {error && <p role="alert">{error}</p>}
+      <p class="muted" style="margin-bottom:12px;">
+        Cole o treino gerado pela IA (JSON ou lista de exercícios).
+      </p>
+      {error && (
+        <p role="alert" style="color:var(--danger);font-size:13px;margin-bottom:12px;">
+          {error}
+        </p>
+      )}
       <form method="post" action="/importar/preview">
-        <textarea name="raw" rows={12} cols={60}>
+        <textarea name="raw" rows={12} style="margin-bottom:12px;">
           {raw ?? ''}
         </textarea>
-        <button type="submit">Analisar treino</button>
+        <button type="submit" class="btn btn-primary">
+          Analisar treino
+        </button>
       </form>
     </div>
   );
@@ -125,14 +134,19 @@ function ImportPreview({ preview }: { preview: PreviewWorkout }) {
       <form method="post" action="/importar/confirm">
         <input type="hidden" name="workout" value={JSON.stringify(preview)} />
         {preview.days.map((day, dayIndex) => (
-          <section>
+          <div class="card">
             <h2>
               Treino {day.label} — {day.focusName}
             </h2>
             <ul>
               {day.exercises.map((ex, exIndex) => (
-                <li>
-                  {ex.name} — {ex.sets}x{ex.reps}
+                <li class="exercise-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+                  <div>
+                    <span class="exercise-name">{ex.name}</span>{' '}
+                    <span class="exercise-meta">
+                      — {ex.sets}x{ex.reps}
+                    </span>
+                  </div>
                   {ex.exerciseId === null && (
                     <select name={`resolve_${dayIndex}_${exIndex}`}>
                       {ex.candidates.map(c => (
@@ -144,9 +158,11 @@ function ImportPreview({ preview }: { preview: PreviewWorkout }) {
                 </li>
               ))}
             </ul>
-          </section>
+          </div>
         ))}
-        <button type="submit">Confirmar e salvar planilha</button>
+        <button type="submit" class="btn btn-primary">
+          Confirmar e salvar planilha
+        </button>
       </form>
     </div>
   );

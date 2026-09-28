@@ -25,14 +25,26 @@ authRoutes.get('/', async c => {
 
   return c.html(
     <Layout title="Entrar">
-      <h1>Quem está treinando?</h1>
-      <ul>
+      <div class="center" style="margin-bottom:24px;">
+        <div style="font-size:32px;">💪</div>
+        <h1 style="margin-top:8px;">Quem está treinando?</h1>
+      </div>
+      <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
         {(users ?? []).map(u => (
-          <li>
-            <a href={`/login/${u.id}`}>{u.name}</a>
-          </li>
+          <a
+            href={`/login/${u.id}`}
+            style="display:flex;flex-direction:column;align-items:center;gap:8px;text-decoration:none;width:84px;"
+          >
+            <div
+              style="width:64px;height:64px;border-radius:50%;background:var(--accent);color:var(--accent-contrast);
+                     display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;"
+            >
+              {u.name.charAt(0).toUpperCase()}
+            </div>
+            <span style="font-size:14px;">{u.name}</span>
+          </a>
         ))}
-      </ul>
+      </div>
     </Layout>
   );
 });
@@ -55,12 +67,35 @@ authRoutes.get('/:userId', async c => {
 
   return c.html(
     <Layout title={`Entrar — ${user.name}`}>
-      <h1>Olá, {user.name}</h1>
-      <form method="post" action={`/login/${user.id}`}>
-        <input type="password" name="pin" inputmode="numeric" maxlength={4} autofocus />
-        <button type="submit">Entrar</button>
-      </form>
-      <a href="/login?trocar=1">Trocar usuário</a>
+      <div class="center card">
+        <div
+          style="width:64px;height:64px;border-radius:50%;background:var(--accent);color:var(--accent-contrast);
+                 display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;margin:0 auto 12px;"
+        >
+          {user.name.charAt(0).toUpperCase()}
+        </div>
+        <h1>Olá, {user.name}</h1>
+        <form method="post" action={`/login/${user.id}`}>
+          <input
+            type="password"
+            name="pin"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength={4}
+            autofocus
+            placeholder="PIN"
+            style="text-align:center;letter-spacing:8px;font-size:20px;margin-bottom:12px;"
+          />
+          <button type="submit" class="btn btn-primary">
+            Entrar
+          </button>
+        </form>
+        <div style="margin-top:16px;">
+          <a href="/login?trocar=1" class="link">
+            Trocar usuário
+          </a>
+        </div>
+      </div>
     </Layout>
   );
 });
@@ -82,7 +117,14 @@ authRoutes.post('/:userId', async c => {
   if (!user) return c.notFound();
 
   if (user.lockedUntil && user.lockedUntil > Date.now()) {
-    return c.html(<Layout title="Entrar"><p>Muitas tentativas. Tente novamente em instantes.</p></Layout>, 429);
+    return c.html(
+      <Layout title="Entrar">
+        <div class="card center">
+          <p class="muted">Muitas tentativas. Tente novamente em instantes.</p>
+        </div>
+      </Layout>,
+      429
+    );
   }
 
   const valid = await verifyPin(pin, user.pinHash);
@@ -100,7 +142,14 @@ authRoutes.post('/:userId', async c => {
         .bind(Date.now() + LOCK_MS, userId)
         .run();
     }
-    return c.html(<Layout title="Entrar"><p>PIN incorreto.</p></Layout>, 401);
+    return c.html(
+      <Layout title="Entrar">
+        <div class="card center">
+          <p class="muted">PIN incorreto.</p>
+        </div>
+      </Layout>,
+      401
+    );
   }
 
   await c.env.DB.prepare('UPDATE users SET failed_pin_attempts = 0, locked_until = NULL WHERE id = ?')

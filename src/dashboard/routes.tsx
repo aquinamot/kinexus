@@ -41,52 +41,65 @@ dashboardRoutes.get('/', async c => {
     if (nextDay) exercises = await getDayExercises(c.env.DB, nextDay.id);
   }
 
+  const weekdayLabels = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+
   return c.html(
-    <Layout title="Kinexus">
-      <section>
+    <Layout title="Kinexus" showNav>
+      <div class="card">
         <h2>
           Frequência — {month}/{year}
         </h2>
+        <div class="cal-grid">
+          {weekdayLabels.map(w => (
+            <div class="cal-weekday">{w}</div>
+          ))}
+        </div>
         {weeks.map(week => (
-          <div>
-            {week.map(day => (
-              <span>
-                {day.inMonth ? day.day : ''}
-                {day.trained ? ' ✓' : ''}
-                {day.isToday ? ' (hoje)' : ''}
-              </span>
-            ))}
+          <div class="cal-grid" style="margin-top:4px;">
+            {week.map(day => {
+              const classes = ['cal-day'];
+              if (day.inMonth) classes.push('in-month');
+              if (day.trained) classes.push('trained');
+              if (day.isToday) classes.push('today');
+              return <div class={classes.join(' ')}>{day.inMonth ? day.day : ''}</div>;
+            })}
           </div>
         ))}
-      </section>
-      <section>
+      </div>
+      <div class="card">
         {nextDay ? (
           <>
             <h2>Treino {nextDay.label}</h2>
-            <ul>
+            <ul style="margin-bottom:16px;">
               {exercises.map(ex => (
-                <li>
-                  {ex.name} — {ex.sets}x{ex.reps}
+                <li class="exercise-row">
+                  <span>
+                    {ex.name} — {ex.sets}x{ex.reps}
+                  </span>
                 </li>
               ))}
             </ul>
             {openSession ? (
               <form method="post" action="/sessoes/end">
-                <button type="submit">Finalizar treino</button>
+                <button type="submit" class="btn btn-danger">
+                  ■ Finalizar treino
+                </button>
               </form>
             ) : (
               <form method="post" action="/sessoes/start">
                 <input type="hidden" name="workoutDayId" value={nextDay.id} />
-                <button type="submit">Iniciar treino</button>
+                <button type="submit" class="btn btn-primary">
+                  ▶ Iniciar treino
+                </button>
               </form>
             )}
           </>
         ) : (
-          <p>
-            Nenhuma planilha ativa. <a href="/importar">Importar treino</a>.
+          <p class="muted">
+            Nenhuma planilha ativa. <a href="/importar" class="link">Importar treino</a>.
           </p>
         )}
-      </section>
+      </div>
     </Layout>
   );
 });
