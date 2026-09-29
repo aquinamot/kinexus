@@ -108,6 +108,98 @@ describe('workouts routes', () => {
     expect(updated?.youtubeUrl).toBe('https://youtube.com/watch?v=novo');
   });
 
+  it('refuses to save a link that is not http(s), keeping the previous one', async () => {
+    await persistImportedPlan(env.DB, userId, {
+      planName: 'Plano J',
+      days: [
+        { label: 'A', focusName: 'Core', exercises: [{ exerciseId: null, customName: 'Prancha', sets: 3, reps: '30s', youtubeUrl: 'https://youtube.com/watch?v=antigo' }] },
+      ],
+    });
+    const exercise = await env.DB.prepare('SELECT id FROM workout_exercises ORDER BY id DESC LIMIT 1').first<{ id: number }>();
+
+    const res = await SELF.fetch(`http://local/treinos/exercicio/${exercise!.id}/youtube`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: sessionCookie },
+      body: 'youtube=' + encodeURIComponent('javascript:alert(1)'),
+      redirect: 'manual',
+    });
+    expect(res.status).toBe(302);
+
+    const row = await env.DB.prepare('SELECT youtube_url as youtubeUrl FROM workout_exercises WHERE id = ?')
+      .bind(exercise!.id)
+      .first<{ youtubeUrl: string | null }>();
+    expect(row?.youtubeUrl).toBe('https://youtube.com/watch?v=antigo');
+  });
+
+  it('never renders a stored non-http(s) link as a clickable href', async () => {
+    await persistImportedPlan(env.DB, userId, {
+      planName: 'Plano K',
+      days: [
+        { label: 'A', focusName: 'Core', exercises: [{ exerciseId: null, customName: 'Ponte', sets: 3, reps: '12', youtubeUrl: null }] },
+      ],
+    });
+    const exercise = await env.DB.prepare('SELECT id FROM workout_exercises ORDER BY id DESC LIMIT 1').first<{ id: number }>();
+    // Simula um link gravado antes da validação existir.
+    await env.DB.prepare('UPDATE workout_exercises SET youtube_url = ? WHERE id = ?')
+      .bind('javascript:alert(1)', exercise!.id)
+      .run();
+
+    const html = await (
+      await SELF.fetch(`http://local/treinos/exercicio/${exercise!.id}`, { headers: { cookie: sessionCookie } })
+    ).text();
+    expect(html).not.toContain('href="javascript:');
+  });
+
+  it('embeds the pasted YouTube video on the exercise detail page', async () => {
+    await persistImportedPlan(env.DB, userId, {
+      planName: 'Plano M',
+      days: [
+        { label: 'A', focusName: 'Core', exercises: [{ exerciseId: null, customName: 'Ponte', sets: 3, reps: '12', youtubeUrl: 'https://youtu.be/dQw4w9WgXcQ' }] },
+      ],
+    });
+    const exercise = await env.DB.prepare('SELECT id FROM workout_exercises ORDER BY id DESC LIMIT 1').first<{ id: number }>();
+
+    const html = await (
+      await SELF.fetch(`http://local/treinos/exercicio/${exercise!.id}`, { headers: { cookie: sessionCookie } })
+    ).text();
+    expect(html).toContain('<iframe');
+    expect(html).toContain('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+    // Se o dono do vídeo bloquear incorporação, o link direto continua ali.
+    expect(html).toContain('href="https://youtu.be/dQw4w9WgXcQ"');
+  });
+
+  it('falls back to a plain link when the saved URL is not an embeddable YouTube video', async () => {
+    await persistImportedPlan(env.DB, userId, {
+      planName: 'Plano N',
+      days: [
+        { label: 'A', focusName: 'Core', exercises: [{ exerciseId: null, customName: 'Ponte', sets: 3, reps: '12', youtubeUrl: 'https://vimeo.com/123456' }] },
+      ],
+    });
+    const exercise = await env.DB.prepare('SELECT id FROM workout_exercises ORDER BY id DESC LIMIT 1').first<{ id: number }>();
+
+    const html = await (
+      await SELF.fetch(`http://local/treinos/exercicio/${exercise!.id}`, { headers: { cookie: sessionCookie } })
+    ).text();
+    expect(html).not.toContain('<iframe');
+    expect(html).toContain('href="https://vimeo.com/123456"');
+  });
+
+  it('tells the user the link applies only to this day of the plan', async () => {
+    await persistImportedPlan(env.DB, userId, {
+      planName: 'Plano L',
+      days: [
+        { label: 'A', focusName: 'Core', exercises: [{ exerciseId: null, customName: 'Ponte', sets: 3, reps: '12', youtubeUrl: 'https://youtube.com/watch?v=x' }] },
+      ],
+    });
+    const exercise = await env.DB.prepare('SELECT id FROM workout_exercises ORDER BY id DESC LIMIT 1').first<{ id: number }>();
+
+    const html = await (
+      await SELF.fetch(`http://local/treinos/exercicio/${exercise!.id}`, { headers: { cookie: sessionCookie } })
+    ).text();
+    expect(html).not.toContain('todos os dias da planilha');
+    expect(html).toContain('só neste dia');
+  });
+
   it("refuses to update another user's exercise", async () => {
     await persistImportedPlan(env.DB, userId, {
       planName: 'Plano privado',

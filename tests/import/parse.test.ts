@@ -48,6 +48,28 @@ describe('parseWorkoutInput', () => {
     }
   });
 
+  it('drops a "youtube" field that is not an http(s) link', () => {
+    const raw = JSON.stringify({
+      plano: 'Plano',
+      dias: [
+        {
+          label: 'A',
+          foco: 'Peito',
+          exercicios: [
+            { nome: 'Supino', series: 4, reps: '8-10', youtube: 'javascript:alert(1)' },
+            { nome: 'Crucifixo', series: 3, reps: '12', youtube: 'youtube.com/watch?v=sem-esquema' },
+          ],
+        },
+      ],
+    });
+    const result = parseWorkoutInput(raw);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.workout.days[0].exercises[0].youtubeUrl).toBeNull();
+      expect(result.workout.days[0].exercises[1].youtubeUrl).toBeNull();
+    }
+  });
+
   it('parses a semi-structured list', () => {
     const raw = `
 Treino A - Peito/Tríceps

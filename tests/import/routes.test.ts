@@ -131,6 +131,40 @@ describe('import routes', () => {
     ).bind(userId).first<{ youtubeUrl: string }>();
     expect(saved?.youtubeUrl).toBe('https://youtube.com/watch?v=xyz');
   });
+
+  it('drops a non-http(s) link smuggled into the confirm payload', async () => {
+    const workout = {
+      planName: 'Plano D',
+      days: [
+        {
+          label: 'A',
+          focusName: 'Peito',
+          exercises: [
+            { name: 'Avulso', sets: 3, reps: '10', youtubeUrl: 'javascript:alert(1)', exerciseId: null, candidates: [] },
+          ],
+        },
+      ],
+    };
+    const confirmBody = new URLSearchParams();
+    confirmBody.set('workout', JSON.stringify(workout));
+    confirmBody.set('resolve_0_0', 'avulso');
+
+    await SELF.fetch('http://local/importar/confirm', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: sessionCookie },
+      body: confirmBody.toString(),
+      redirect: 'manual',
+    });
+
+    const saved = await env.DB.prepare(
+      `SELECT we.youtube_url as youtubeUrl FROM workout_exercises we
+       JOIN workout_days wd ON wd.id = we.workout_day_id
+       JOIN workout_plans wp ON wp.id = wd.plan_id
+       WHERE wp.user_id = ? AND wp.is_active = 1`
+    ).bind(userId).first<{ youtubeUrl: string | null }>();
+    expect(saved).not.toBeNull();
+    expect(saved?.youtubeUrl).toBeNull();
+  });
 });
 
 function decodeHtmlEntities(s: string): string {

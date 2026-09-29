@@ -3,6 +3,7 @@ import { parseWorkoutInput, type ParsedWorkout } from './parse';
 import { findExactMatch, findClosestMatches, type CatalogExercise, type MatchCandidate } from '../exercises/match';
 import { persistImportedPlan, type ResolvedWorkout } from '../workouts/repo';
 import { Layout } from '../views/layout';
+import { httpUrlOrNull } from '../safeUrl';
 import type { Env } from '../types';
 import type { AuthedVars } from '../auth/middleware';
 
@@ -68,14 +69,16 @@ importRoutes.post('/confirm', async c => {
       label: day.label,
       focusName: day.focusName,
       exercises: day.exercises.map((ex, exIndex) => {
+        // O treino volta do cliente num campo oculto, então o link é revalidado aqui.
+        const youtubeUrl = httpUrlOrNull(ex.youtubeUrl);
         if (ex.exerciseId !== null) {
-          return { exerciseId: ex.exerciseId, customName: null, sets: ex.sets, reps: ex.reps, youtubeUrl: ex.youtubeUrl };
+          return { exerciseId: ex.exerciseId, customName: null, sets: ex.sets, reps: ex.reps, youtubeUrl };
         }
         const resolution = String(body[`resolve_${dayIndex}_${exIndex}`] ?? 'avulso');
         if (resolution === 'avulso') {
-          return { exerciseId: null, customName: ex.name, sets: ex.sets, reps: ex.reps, youtubeUrl: ex.youtubeUrl };
+          return { exerciseId: null, customName: ex.name, sets: ex.sets, reps: ex.reps, youtubeUrl };
         }
-        return { exerciseId: Number(resolution), customName: null, sets: ex.sets, reps: ex.reps, youtubeUrl: ex.youtubeUrl };
+        return { exerciseId: Number(resolution), customName: null, sets: ex.sets, reps: ex.reps, youtubeUrl };
       }),
     })),
   };

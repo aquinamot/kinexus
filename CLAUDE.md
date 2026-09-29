@@ -23,7 +23,7 @@ Os testes rodam no runtime real de Workers via `@cloudflare/vitest-pool-workers`
 
 ## Arquitetura
 
-Worker único em Cloudflare + Hono com JSX renderizado **no servidor**, e D1 (SQLite) como banco. Não existe build de frontend, bundler de assets nem SPA. Todo o CSS mora em `src/views/layout.tsx` como uma string; JavaScript no cliente aparece em exatamente quatro lugares, como strings injetadas na página: cronômetro e checklist da sessão (`src/dashboard/routes.tsx`), busca na lista de exercícios (`src/workouts/routes.tsx`) e teclado de PIN (`src/auth/routes.tsx`). Tudo o mais precisa funcionar sem JavaScript — por isso o detalhe do exercício é rota própria (`GET /treinos/exercicio/:id`) e não um painel de JS.
+Worker único em Cloudflare + Hono com JSX renderizado **no servidor**, e D1 (SQLite) como banco. Não existe build de frontend, bundler de assets nem SPA. Todo o CSS mora em `src/views/layout.tsx` como uma string; JavaScript no cliente aparece em exatamente três scripts, como strings injetadas na página: cronômetro e checklist da sessão (`src/dashboard/routes.tsx`), busca na lista de exercícios (`src/workouts/routes.tsx`) e teclado de PIN (`src/auth/routes.tsx`), além do `confirm()` inline no botão de excluir planilha. Tudo o mais precisa funcionar sem JavaScript — por isso o detalhe do exercício é rota própria (`GET /treinos/exercicio/:id`) e não um painel de JS.
 
 `src/index.ts` monta as rotas e aplica `requireAuth` em tudo que vem depois de `/login` e `/logout`.
 
@@ -51,6 +51,7 @@ Hoje o catálogo tem 1706 exercícios, 383 com imagem, 382 com vídeo e passo a 
 - **Recriar o catálogo quebra as planilhas.** `workout_exercises.exercise_id` referencia `exercises`, e `custom_name` fica nulo quando há match. O par 0004/0006 mostra o caminho: descer o nome para `custom_name` antes de apagar e religar por nome depois.
 - **Datas são de São Paulo, não UTC.** Sempre use `src/dateBR.ts`; `new Date().getMonth()` direto dá o mês errado à noite.
 - **O SQL do seed tem `INSERT` que ocupa mais de uma linha** — algumas descrições da Garmin trazem quebra de linha. Processe por instrução, não por linha (ver `scripts/generate-exercise-reference.ts`).
+- **Link do YouTube passa por `httpUrlOrNull` (`src/safeUrl.ts`) em toda entrada e antes de virar `href`.** Ele vem de texto colado e do JSON oculto do `/importar/confirm`, que o cliente pode editar. O link é por linha de `workout_exercises`, ou seja, vale para um dia só. Na tela de detalhe, `youtubeEmbedUrl` o transforma em iframe do `youtube-nocookie.com`; link que não é vídeo único do YouTube fica só como link.
 - Sessão aberta há mais de 5 horas fecha sozinha com `duration_counted = 0`: conta como dia treinado na frequência, mas fica fora de estatística de duração.
 - `temp/` está no `.gitignore` e guarda os dados pessoais de treino e os mockups. Não mova esse conteúdo para dentro do repositório sem perguntar.
 

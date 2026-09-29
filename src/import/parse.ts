@@ -1,3 +1,5 @@
+import { httpUrlOrNull } from '../safeUrl';
+
 export interface ParsedExercise {
   name: string;
   sets: number;
@@ -88,7 +90,7 @@ function tryParseJson(text: string): ParseResult | null {
           error: `Exercício inválido em "${d.label}": precisa de nome (texto), series (número) e reps (texto).`,
         };
       }
-      const youtubeUrl = typeof e.youtube === 'string' ? e.youtube : null;
+      const youtubeUrl = httpUrlOrNull(e.youtube);
       exercises.push({ name: e.nome, sets: e.series, reps: e.reps, youtubeUrl });
     }
 

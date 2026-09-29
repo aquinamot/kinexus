@@ -8,6 +8,7 @@ import {
 } from './repo';
 import { Layout } from '../views/layout';
 import { ExerciseRow, refState } from '../views/exercise-row';
+import { httpUrlOrNull, youtubeEmbedUrl } from '../safeUrl';
 import type { Env } from '../types';
 import type { AuthedVars } from '../auth/middleware';
 
@@ -42,7 +43,11 @@ workoutsRoutes.post('/exercicio/:id/youtube', async c => {
   const youtube = String(body.youtube ?? '').trim();
   const dia = body.dia ? String(body.dia) : null;
 
-  await updateExerciseYoutubeUrl(c.env.DB, userId, exerciseId, youtube || null);
+  // Campo vazio apaga o link; um link que não é http(s) é ignorado e o anterior fica.
+  const safe = httpUrlOrNull(youtube);
+  if (!youtube || safe) {
+    await updateExerciseYoutubeUrl(c.env.DB, userId, exerciseId, safe);
+  }
 
   return c.redirect(dia ? `/treinos/exercicio/${exerciseId}?dia=${dia}` : `/treinos/exercicio/${exerciseId}`);
 });
@@ -62,6 +67,9 @@ workoutsRoutes.get('/exercicio/:id', async c => {
   if (!detail) return c.notFound();
 
   const state = refState(detail);
+  // Linhas gravadas antes da validação podem ter qualquer coisa em youtube_url.
+  const youtubeHref = httpUrlOrNull(detail.youtubeUrl);
+  const youtubeEmbed = youtubeEmbedUrl(detail.youtubeUrl);
   const backHref = dia ? `/treinos?dia=${dia}` : '/treinos';
 
   return c.html(
@@ -89,15 +97,36 @@ workoutsRoutes.get('/exercicio/:id', async c => {
             />
           )}
         </div>
+      ) : state === 'youtube' && youtubeEmbed ? (
+        <>
+          <div class="hero hero-yt">
+            <iframe
+              src={youtubeEmbed}
+              title={`Vídeo do exercício ${detail.name}`}
+              loading="lazy"
+              allow="encrypted-media; picture-in-picture; fullscreen"
+              allowfullscreen
+              referrerpolicy="strict-origin-when-cross-origin"
+            />
+          </div>
+          {/* Há vídeos com incorporação bloqueada pelo dono; o link direto cobre esse caso. */}
+          <p class="meta" style="margin:-8px 0 18px;">
+            <a class="link" href={youtubeHref!} target="_blank" rel="noreferrer">
+              Abrir no YouTube
+            </a>
+          </p>
+        </>
       ) : state === 'youtube' ? (
         <div class="hero hero-empty">
           <svg>
             <use href="#i-play" />
           </svg>
           <span>Vídeo que você salvou</span>
-          <a class="btn btn-quiet btn-sm" href={detail.youtubeUrl!} target="_blank" rel="noreferrer">
-            Abrir no YouTube
-          </a>
+          {youtubeHref && (
+            <a class="btn btn-quiet btn-sm" href={youtubeHref} target="_blank" rel="noreferrer">
+              Abrir no YouTube
+            </a>
+          )}
         </div>
       ) : (
         <div class="hero hero-empty">
@@ -169,7 +198,7 @@ workoutsRoutes.get('/exercicio/:id', async c => {
       </h2>
       <p class="meta" style="margin:0 0 4px;">
         {state === 'youtube'
-          ? 'Trocar o link vale para este exercício em todos os dias da planilha.'
+          ? 'O link vale só neste dia da planilha. Se o exercício se repete em outro treino, cole lá também.'
           : 'Cole um link do YouTube para ter a referência aqui dentro na hora do treino.'}
       </p>
       <form method="post" action={`/treinos/exercicio/${detail.id}/youtube`} class="yt-form">

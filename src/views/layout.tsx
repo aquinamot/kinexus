@@ -269,6 +269,8 @@ textarea.field { font-size: 14px; line-height: 1.55; resize: vertical; min-heigh
   display: flex; align-items: center; justify-content: center;
 }
 .hero img, .hero video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-yt { aspect-ratio: 16 / 9; background: #000; }
+.hero-yt iframe { width: 100%; height: 100%; border: 0; display: block; }
 .hero-play {
   position: absolute; inset: auto 12px 12px auto;
   background: rgba(12,20,16,.72); color: #fff; border: 0; cursor: pointer;
