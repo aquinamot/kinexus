@@ -28,7 +28,7 @@ describe('dashboard route', () => {
     expect(await res.text()).toContain('Nenhuma planilha ativa');
   });
 
-  it('shows the next workout day and an "Iniciar treino" button', async () => {
+  it('shows the next workout day and a "Começar treino" button', async () => {
     await persistImportedPlan(env.DB, userId, {
       planName: 'Plano Dashboard',
       days: [{ label: 'A', focusName: 'Peito', exercises: [{ exerciseId: null, customName: 'Supino', sets: 4, reps: '8-10', youtubeUrl: null }] }],
@@ -37,7 +37,7 @@ describe('dashboard route', () => {
     const res = await SELF.fetch('http://local/', { headers: { cookie: sessionCookie } });
     const html = await res.text();
     expect(html).toContain('Treino A');
-    expect(html).toContain('Iniciar treino');
+    expect(html).toContain('Começar treino');
   });
 
   it('shows "Finalizar treino" while a session is open', async () => {
@@ -86,7 +86,7 @@ describe('dashboard route', () => {
     const after = await SELF.fetch('http://local/', { headers: { cookie: sessionCookie } });
     const afterHtml = await after.text();
     expect(afterHtml).toContain('Treino B');
-    expect(afterHtml).toContain('Iniciar treino');
+    expect(afterHtml).toContain('Começar treino');
   });
 
   it('shows the day of the open session (not the next one in rotation) while it is still running', async () => {
@@ -123,7 +123,8 @@ describe('dashboard route', () => {
     try {
       const res = await SELF.fetch('http://local/', { headers: { cookie: sessionCookie } });
       const html = await res.text();
-      expect(html).toContain('Frequência — 9/2026');
+      expect(html).toContain('Frequência');
+      expect(html).toContain('setembro de 2026');
     } finally {
       vi.useRealTimers();
     }

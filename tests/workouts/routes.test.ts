@@ -44,7 +44,7 @@ describe('workouts routes', () => {
     expect(html).toContain('Supino');
   });
 
-  it('shows a YouTube link when the imported exercise has one, and falls back to the Garmin image otherwise', async () => {
+  it('prefers the pasted YouTube link over Garmin media, and shows the link on the exercise detail page', async () => {
     const exerciseRow = await env.DB.prepare(
       "INSERT INTO exercises (name, muscle_group, garmin_image_url) VALUES ('Supino reto com barra', 'Peito', 'https://connect.garmin.com/img.jpg') RETURNING id"
     ).first<{ id: number }>();
@@ -57,6 +57,7 @@ describe('workouts routes', () => {
           focusName: 'Peito',
           exercises: [
             { exerciseId: exerciseRow!.id, customName: null, sets: 4, reps: '8-10', youtubeUrl: 'https://youtube.com/watch?v=abc123' },
+            { exerciseId: exerciseRow!.id, customName: null, sets: 3, reps: '10', youtubeUrl: null },
             { exerciseId: null, customName: 'Exercício sem nenhuma referência', sets: 3, reps: '12', youtubeUrl: null },
           ],
         },
@@ -65,8 +66,20 @@ describe('workouts routes', () => {
 
     const res = await SELF.fetch('http://local/treinos', { headers: { cookie: sessionCookie } });
     const html = await res.text();
-    expect(html).toContain('https://youtube.com/watch?v=abc123');
-    expect(html).toContain('Sem referência disponível');
+    // Os três estados aparecem lado a lado: o link do usuário ganha da imagem da
+    // Garmin no primeiro, o segundo cai na imagem da Garmin, o terceiro é avulso.
+    expect(html).toContain('Seu vídeo');
+    expect(html).toContain('Imagem da Garmin');
+    expect(html).toContain('Sem referência');
+
+    // O link em si mora na tela de detalhe, não na lista.
+    const withYoutube = await env.DB.prepare(
+      'SELECT id FROM workout_exercises WHERE youtube_url IS NOT NULL ORDER BY id DESC LIMIT 1'
+    ).first<{ id: number }>();
+    const detailRes = await SELF.fetch(`http://local/treinos/exercicio/${withYoutube!.id}`, {
+      headers: { cookie: sessionCookie },
+    });
+    expect(await detailRes.text()).toContain('https://youtube.com/watch?v=abc123');
   });
 
   it('lets the user paste a YouTube link for an exercise without reimporting the whole plan', async () => {

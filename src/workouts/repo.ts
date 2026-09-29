@@ -32,12 +32,28 @@ export interface ActivePlan {
 
 export interface DayExercise {
   id: number;
+  exerciseId: number | null;
   name: string;
   sets: number;
   reps: string;
   garminImageUrl: string | null;
   garminVideoUrl: string | null;
   youtubeUrl: string | null;
+  muscleGroup: string | null;
+  secondaryMuscles: string | null;
+  difficulty: string | null;
+  description: string | null;
+  /** JSON array de strings (passo a passo), como gravado na coluna `steps`, ou null. */
+  steps: string | null;
+  discipline: string | null;
+  category: string | null;
+  equipment: string | null;
+}
+
+/** Detalhe completo de um exercício de uma planilha, já com o passo a passo desserializado. */
+export interface ExerciseDetail extends Omit<DayExercise, 'steps'> {
+  workoutDayId: number;
+  steps: string[] | null;
 }
 
 export async function persistImportedPlan(
@@ -137,16 +153,27 @@ export async function updateExerciseYoutubeUrl(
   return (result.meta.changes ?? 0) > 0;
 }
 
-export async function getDayExercises(db: D1Database, workoutDayId: number): Promise<DayExercise[]> {
-  const { results } = await db.prepare(
-    `SELECT
+const DAY_EXERCISE_COLUMNS = `
        we.id,
+       we.exercise_id as exerciseId,
        COALESCE(e.name, we.custom_name) as name,
        we.sets,
        we.reps,
        e.garmin_image_url as garminImageUrl,
        e.garmin_video_url as garminVideoUrl,
-       we.youtube_url as youtubeUrl
+       we.youtube_url as youtubeUrl,
+       e.muscle_group as muscleGroup,
+       e.secondary_muscles as secondaryMuscles,
+       e.difficulty as difficulty,
+       e.description as description,
+       e.steps as steps,
+       e.discipline as discipline,
+       e.category as category,
+       e.equipment as equipment`;
+
+export async function getDayExercises(db: D1Database, workoutDayId: number): Promise<DayExercise[]> {
+  const { results } = await db.prepare(
+    `SELECT${DAY_EXERCISE_COLUMNS}
      FROM workout_exercises we
      LEFT JOIN exercises e ON e.id = we.exercise_id
      WHERE we.workout_day_id = ?
@@ -154,4 +181,39 @@ export async function getDayExercises(db: D1Database, workoutDayId: number): Pro
   ).bind(workoutDayId).all<DayExercise>();
 
   return results ?? [];
+}
+
+/**
+ * Busca o detalhe de um exercício de uma planilha, escopado ao usuário logado —
+ * mesmo padrão de posse usado em updateExerciseYoutubeUrl (join até workout_plans.user_id).
+ * Retorna null se o exercício não existir ou não pertencer a uma planilha do usuário.
+ */
+export async function getExerciseDetail(
+  db: D1Database,
+  userId: number,
+  workoutExerciseId: number
+): Promise<ExerciseDetail | null> {
+  const row = await db.prepare(
+    `SELECT${DAY_EXERCISE_COLUMNS},
+       we.workout_day_id as workoutDayId
+     FROM workout_exercises we
+     LEFT JOIN exercises e ON e.id = we.exercise_id
+     JOIN workout_days wd ON wd.id = we.workout_day_id
+     JOIN workout_plans wp ON wp.id = wd.plan_id
+     WHERE we.id = ? AND wp.user_id = ?`
+  ).bind(workoutExerciseId, userId).first<DayExercise & { workoutDayId: number }>();
+
+  if (!row) return null;
+
+  let steps: string[] | null = null;
+  if (row.steps) {
+    try {
+      const parsed = JSON.parse(row.steps as unknown as string);
+      if (Array.isArray(parsed)) steps = parsed;
+    } catch {
+      steps = null;
+    }
+  }
+
+  return { ...row, steps };
 }

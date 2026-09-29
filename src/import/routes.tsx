@@ -28,7 +28,7 @@ export const importRoutes = new Hono<{ Bindings: Env; Variables: AuthedVars }>()
 
 importRoutes.get('/', c =>
   c.html(
-    <Layout title="Importar treino" showNav>
+    <Layout title="Importar treino" showNav active="importar">
       <ImportForm />
     </Layout>
   )
@@ -41,7 +41,7 @@ importRoutes.post('/preview', async c => {
 
   if (!result.ok) {
     return c.html(
-      <Layout title="Importar treino" showNav>
+      <Layout title="Importar treino" showNav active="importar">
         <ImportForm raw={raw} error={result.error} />
       </Layout>
     );
@@ -51,7 +51,7 @@ importRoutes.post('/preview', async c => {
   const preview = buildPreview(result.workout, catalog ?? []);
 
   return c.html(
-    <Layout title="Revisar importação" showNav>
+    <Layout title="Revisar importação" showNav active="importar">
       <ImportPreview preview={preview} />
     </Layout>
   );
@@ -107,31 +107,33 @@ function buildPreview(workout: ParsedWorkout, catalog: CatalogExercise[]): Previ
 
 function ImportForm({ raw, error }: { raw?: string; error?: string }) {
   return (
-    <div class="card">
-      <h1>Importar treino</h1>
-      <p class="muted" style="margin-bottom:12px;">
-        Cole o treino gerado pela IA (JSON ou lista de exercícios).
-      </p>
-      {error && (
-        <p role="alert" style="color:var(--danger);font-size:13px;margin-bottom:12px;">
-          {error}
+    <div class="split">
+      <div>
+        <h1 class="display d-lg">Importar treino</h1>
+        <p class="lede">
+          Cole o treino que a IA montou. O Kinexus reconhece os exercícios no catálogo da Garmin e traz imagem, vídeo
+          e passo a passo de quem tiver.
         </p>
-      )}
-      <form method="post" action="/importar/preview">
-        <textarea name="raw" rows={12} style="margin-bottom:12px;">
-          {raw ?? ''}
-        </textarea>
-        <button type="submit" class="btn btn-primary">
-          Analisar treino
-        </button>
-      </form>
-      <details style="margin-top:16px;">
-        <summary class="link" style="cursor:pointer;">
-          Ver formato esperado do JSON
-        </summary>
-        <pre
-          style="margin-top:10px;padding:12px;background:var(--bg);border-radius:10px;font-size:11px;overflow-x:auto;"
-        >{`{
+        {error && (
+          <p role="alert" style="color:var(--flag);font-size:13px;margin:14px 0 0;">
+            {error}
+          </p>
+        )}
+        <form method="post" action="/importar/preview">
+          <textarea class="field" name="raw" rows={12} style="margin-top:16px;" spellcheck={false}>
+            {raw ?? ''}
+          </textarea>
+          <button type="submit" class="btn btn-band" style="margin-top:14px;">
+            Ler o treino
+          </button>
+        </form>
+        <details style="margin-top:20px;">
+          <summary class="link" style="cursor:pointer;">
+            Ver formato esperado do JSON
+          </summary>
+          <pre
+            style="margin-top:10px;padding:12px;background:var(--surface-2);border-radius:10px;font-size:11px;overflow-x:auto;"
+          >{`{
   "plano": "Nome da planilha",
   "dias": [
     {
@@ -148,11 +150,25 @@ function ImportForm({ raw, error }: { raw?: string; error?: string }) {
     }
   ]
 }`}</pre>
-        <p class="muted" style="margin-top:8px;">
-          O campo <code>youtube</code> é opcional — use quando o exercício não existir no catálogo da Garmin (ex:
-          exercícios de reabilitação/estabilização).
-        </p>
-      </details>
+          <p class="meta" style="margin-top:8px;">
+            O campo <code>youtube</code> é opcional — use quando o exercício não existir no catálogo da Garmin (ex:
+            exercícios de reabilitação/estabilização).
+          </p>
+        </details>
+      </div>
+      <aside>
+        <div class="block" style="margin-top:0;">
+          <div class="block-head">
+            <h2>Prévia</h2>
+            <span class="meta">aguardando</span>
+          </div>
+          <div class="panel">
+            <p class="meta" style="margin:0;">
+              Nada lido ainda. Cole o conteúdo e toque em Ler o treino — nada é salvo até você confirmar.
+            </p>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }
@@ -160,37 +176,38 @@ function ImportForm({ raw, error }: { raw?: string; error?: string }) {
 function ImportPreview({ preview }: { preview: PreviewWorkout }) {
   return (
     <div>
-      <h1>Revisar: {preview.planName}</h1>
+      <h1 class="display d-lg">Revisar: {preview.planName}</h1>
       <form method="post" action="/importar/confirm">
         <input type="hidden" name="workout" value={JSON.stringify(preview)} />
         {preview.days.map((day, dayIndex) => (
-          <div class="card">
-            <h2>
-              Treino {day.label} — {day.focusName}
-            </h2>
-            <ul>
-              {day.exercises.map((ex, exIndex) => (
-                <li class="exercise-row" style="flex-direction:column;align-items:stretch;gap:6px;">
-                  <div>
-                    <span class="exercise-name">{ex.name}</span>{' '}
-                    <span class="exercise-meta">
-                      — {ex.sets}x{ex.reps}
-                    </span>
-                  </div>
-                  {ex.exerciseId === null && (
-                    <select name={`resolve_${dayIndex}_${exIndex}`}>
-                      {ex.candidates.map(c => (
-                        <option value={c.exercise.id}>{c.exercise.name}</option>
-                      ))}
-                      <option value="avulso">Nenhum — manter como está</option>
-                    </select>
-                  )}
-                </li>
-              ))}
-            </ul>
+          <div class="block">
+            <div class="panel">
+              <div class="block-head">
+                <h2>
+                  Treino {day.label} — {day.focusName}
+                </h2>
+              </div>
+              <ul class="list">
+                {day.exercises.map((ex, exIndex) => (
+                  <li class="preview-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+                    <div>
+                      <b>{ex.name}</b> <span class="meta">— {ex.sets}x{ex.reps}</span>
+                    </div>
+                    {ex.exerciseId === null && (
+                      <select class="field" name={`resolve_${dayIndex}_${exIndex}`}>
+                        {ex.candidates.map(c => (
+                          <option value={c.exercise.id}>{c.exercise.name}</option>
+                        ))}
+                        <option value="avulso">Nenhum — manter como está</option>
+                      </select>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         ))}
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" class="btn btn-band" style="margin-top:22px;">
           Confirmar e salvar planilha
         </button>
       </form>
