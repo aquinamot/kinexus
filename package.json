@@ -11,7 +11,8 @@
     "db:migrate:local": "wrangler d1 migrations apply kinexus --local",
     "db:migrate:remote": "wrangler d1 migrations apply kinexus --remote",
     "seed:users": "tsx scripts/generate-user-seed.ts",
-    "seed:exercises": "tsx seed/fetch-garmin-catalog.ts"
+    "seed:exercises": "tsx seed/fetch-garmin-catalog.ts",
+    "ref:exercises": "tsx scripts/generate-exercise-reference.ts"
   },
   "dependencies": {
     "hono": "^4.6.0"
